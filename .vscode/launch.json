@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:flyer}",
+            "name": "Debug flyer",
+            "target": "flyer",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug flyer"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:flyer}",
+            "name": "Release flyer",
+            "target": "flyer",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release flyer"
+        }
+    ]
+}
