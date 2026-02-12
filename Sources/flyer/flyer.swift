@@ -1,21 +1,37 @@
 
 import ArgumentParser
+import Foundation
 
-struct Install: ParsableCommand {
+struct Install: AsyncParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Install a package")
 
-    @Argument(help: "Package to deploy")
+    @Argument(help: "Package to deploy (with category/name)")
     var package: String
 
     @Flag(name: .shortAndLong, help: "Show detailed output.")
     var verbose = false
     
-    func run() throws {
+    func run() async throws {
+        try Repo.sync()
+
+        let path = "\(Paths.base)/\(package)"
+        let build = "\(path)/build.oriole"
+        let file = FileManager()
+
         if verbose {
             print("\(Colored.green)[INSTALL]\(Colored.reset) Start deployment for package \(Colored.blue)\(package)\(Colored.reset)")
+            print("\(Bold.cyan)Starting\(Colored.reset) tree check for package \(package)")
         }
 
-        print("Installing \(Colored.blue)\(package)\(Colored.reset)")
+        if !file.fileExists(atPath: build) {
+            print("\(Colored.red)Error: \(Colored.reset) Package \(Colored.blue)\(package)\(Colored.reset) does not exist.")
+            return
+        }
+
+        print("\(Bold.green)Found\(Colored.reset) \(package), starting build")
+
+        let buildData = try Data(contentsOf: URL(fileURLWithPath: build))
+        let 
     }
 }
 
