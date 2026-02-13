@@ -3,7 +3,8 @@ import Foundation
 struct BuildFile: Codable {
     let name: String
     let version: String
-    let description: String
+    let desc: String
+    let deps: [String]
     let maintainer: String
     let source: String
     let checksum: String
