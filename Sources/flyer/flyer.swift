@@ -52,12 +52,3 @@ struct Remove: ParsableCommand {
         print("Removing \(Colored.blue)\(package)\(Colored.reset)")
     }
 }
-
-@main
-struct flyer: ParsableCommand {
-    static let configuration = CommandConfiguration(
-        commandName: "flyer",
-        abstract: "Source-based package manager in Swift",
-        subcommands: [Install.self, Remove.self]
-    )
-}
