@@ -40,19 +40,19 @@ struct Install: AsyncParsableCommand {
 
         print("\(Bold.green)Found\(Colored.reset) \(package), starting build")
 
-        stage("configure", 1, 4)
+        stage(name: "configure", i: 1, max: 4)
         
         print("Configure")
 
-        stage("build", 2, 4)
+        stage(name: "build", i: 2, max: 4)
 
         print ("Build")
 
-        stage("stage", 3, 4)
+        stage(name: "stage", i: 3, max: 4)
 
         print("Staging")
 
-        stage("install", 4, 4)
+        stage(name: "install", i: 4, max: 4)
 
         print("Installing to system")        
     }
