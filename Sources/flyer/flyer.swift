@@ -2,6 +2,16 @@
 import ArgumentParser
 import Foundation
 
+
+@main
+struct flyer: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "flyer",
+        abstract: "Source-based package manager in Swift",
+        subcommands: [Install.self, Remove.self, Sync.self]
+    )
+}
+
 struct Install: AsyncParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Install a package")
 
@@ -29,9 +39,6 @@ struct Install: AsyncParsableCommand {
         }
 
         print("\(Bold.green)Found\(Colored.reset) \(package), starting build")
-
-        let buildData = try Data(contentsOf: URL(fileURLWithPath: build))
-        let 
     }
 }
 
@@ -50,5 +57,11 @@ struct Remove: ParsableCommand {
         }
 
         print("Removing \(Colored.blue)\(package)\(Colored.reset)")
+    }
+}
+
+struct Sync: ParsableCommand {
+    func run() throws {
+        try Repo.sync()
     }
 }

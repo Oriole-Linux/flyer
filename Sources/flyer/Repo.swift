@@ -31,7 +31,7 @@ struct Repo {
 
     static func sync() throws {
         try Paths.check()
-        let fm = FileManager.default
+        let fm: FileManager = FileManager.default
         let git_src = "\(Paths.base)/.git"
 
         if fm.fileExists(atPath: git_src) {
