@@ -4,7 +4,7 @@ import Foundation
 
 
 @main
-struct flyer: ParsableCommand {
+struct flyer: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "flyer",
         abstract: "Source-based package manager in Swift",
@@ -61,6 +61,8 @@ struct Remove: ParsableCommand {
 }
 
 struct Sync: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Sync the build repository")
+    
     func run() throws {
         try Repo.sync()
     }
