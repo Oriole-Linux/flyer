@@ -25,7 +25,7 @@ struct Install: AsyncParsableCommand {
         try Repo.sync()
 
         let path = "\(Paths.base)/\(package)"
-        let build = "\(path)/build.oriole"
+        let build = "\(path)/build.plist"
         let file = FileManager()
 
         if verbose {
@@ -39,6 +39,22 @@ struct Install: AsyncParsableCommand {
         }
 
         print("\(Bold.green)Found\(Colored.reset) \(package), starting build")
+
+        stage("configure", 1, 4)
+        
+        print("Configure")
+
+        stage("build", 2, 4)
+
+        print ("Build")
+
+        stage("stage", 3, 4)
+
+        print("Staging")
+
+        stage("install", 4, 4)
+
+        print("Installing to system")        
     }
 }
 

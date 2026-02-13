@@ -13,9 +13,11 @@ struct BuildFile: Codable {
     let install: String
     let stagingFlag: String
     let post: String
+    let remove: String
 }
 
 func decode(from url: URL) throws -> BuildFile {
     let data = try Data(contentsOf: url)
-    return try PropertyListDecoder().decode(BuildFile.self, from: data)
+    let decoder = PropertyListDecoder()
+    return try decoder.decode(BuildFile.self, from: data)    
 }
