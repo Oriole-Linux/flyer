@@ -28,6 +28,7 @@ struct Install: AsyncParsableCommand {
         let build = "\(path)/build.plist"
         let file = FileManager()
 
+        let buildFile = try decode(from: URL(fileURLWithPath: build))
         if verbose {
             print("\(Colored.green)[INSTALL]\(Colored.reset) Start deployment for package \(Colored.blue)\(package)\(Colored.reset)")
             print("\(Bold.cyan)Starting\(Colored.reset) tree check for package \(package)")
@@ -40,8 +41,9 @@ struct Install: AsyncParsableCommand {
 
         print("\(Bold.green)Found\(Colored.reset) \(package), starting build")
 
-        stage(name: "configure", i: 1, max: 4)
-        
+        stage(name: "download", i: 1, max: 5)
+        print("\(Colored.green)Starting\(Colored.reset) download for \(Colored.blue)\(package)\(Colored.reset)")
+
         print("Configure")
 
         stage(name: "build", i: 2, max: 4)
