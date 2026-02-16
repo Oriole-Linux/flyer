@@ -44,6 +44,17 @@ struct Install: AsyncParsableCommand {
         stage(name: "download", i: 1, max: 5)
         print("\(Colored.green)Starting\(Colored.reset) download for \(Colored.blue)\(package)\(Colored.reset)")
 
+        guard let sourceURL = URL(string: buildFile.source) else {
+            print("\(Colored.red)Error:\(Colored.reset) Invalid source URL: \(buildFile.source)")
+            return
+        }
+        do {
+            let url = try await download(from: sourceURL)
+            print("\(Colored.green)Download successful\(Colored.reset) for \(Colored.blue)\(package)\(Colored.reset) at path \(url.path)")
+        } catch {
+            print("\(Colored.red)Download failed\(Colored.reset) for \(Colored.blue)\(package)\(Colored.reset): \(error.localizedDescription)")
+            return
+        }
         print("Configure")
 
         stage(name: "build", i: 2, max: 4)

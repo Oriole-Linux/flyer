@@ -12,6 +12,7 @@ struct BuildFile: Codable {
     let build: String
     let install: String
     let stagingFlag: String
+    let category: String
     let post: String
     let remove: String
 }
