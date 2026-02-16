@@ -79,75 +79,84 @@ struct Install: AsyncParsableCommand {
         stage(name: "configure", i: 3, max: 8)
         print("\(Colored.green)Configuring\(Colored.reset) for package \(Colored.blue)\(package)\(Colored.reset)")
 
-        cmd.executableURL = URL(fileURLWithPath: "/bin/sh")
-        cmd.arguments = ["-c", buildFile.configuring]
-        cmd.currentDirectoryURL = URL(fileURLWithPath: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")
+        let cfgcmd = Process()
+        cfgcmd.executableURL = URL(fileURLWithPath: "/bin/sh")
+        cfgcmd.arguments = ["-c", buildFile.configuring]
+        cfgcmd.currentDirectoryURL = URL(fileURLWithPath: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")
         
-        try cmd.run()
-        cmd.waitUntilExit()
+        try cfgcmd.run()
+        cfgcmd.waitUntilExit()
 
-        if cmd.terminationStatus != 0 {
+        if cfgcmd.terminationStatus != 0 {
             print("\(Colored.red)>>> Error\(Colored.reset) while configuring package \(Colored.blue)\(package)\(Colored.reset)")
             return
         }
 
         stage(name: "build", i: 4, max: 8)
         print("\(Colored.green)Building\(Colored.reset) for package \(Colored.blue)\(package)\(Colored.reset)")
-        cmd.executableURL = URL(fileURLWithPath: "/bin/sh")
-        cmd.arguments = ["-c", buildFile.build]
-        cmd.currentDirectoryURL = URL(fileURLWithPath: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")
 
-        try cmd.run()
-        cmd.waitUntilExit()
+        let buildcmd = Process()
 
-        if cmd.terminationStatus != 0 {
+        buildcmd.executableURL = URL(fileURLWithPath: "/bin/sh")
+        buildcmd.arguments = ["-c", buildFile.build]
+        buildcmd.currentDirectoryURL = URL(fileURLWithPath: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")
+
+        try buildcmd.run()
+        buildcmd.waitUntilExit()
+
+        if buildcmd.terminationStatus != 0 {
             print("\(Colored.red)>>> Error\(Colored.reset) while building package \(Colored.blue)\(package)\(Colored.reset)")
             return
         }
 
         stage(name: "stage", i: 5, max: 8)
-        cmd.executableURL = URL(fileURLWithPath: "/bin/sh")
-        cmd.arguments = ["-c", buildFile.install]
-        cmd.currentDirectoryURL = URL(fileURLWithPath: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")   
+        let stagecmd = Process()
 
-        try cmd.run()
-        cmd.waitUntilExit()
+        stagecmd.executableURL = URL(fileURLWithPath: "/bin/sh")
+        stagecmd.arguments = ["-c", buildFile.install]
+        stagecmd.currentDirectoryURL = URL(fileURLWithPath: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")   
 
-        if cmd.terminationStatus != 0 {
+        try stagecmd.run()
+        stagecmd.waitUntilExit()
+
+        if stagecmd.terminationStatus != 0 {
             print("\(Colored.red)>>> Error\(Colored.reset) while temporary installing package \(Colored.blue)\(package)\(Colored.reset)")
             return
         }
 
         stage(name: "install", i: 6, max: 8)
         print("\(Colored.green)Deploying\(Colored.reset) package \(Colored.blue)\(package)\(Colored.reset)")
-        cmd.executableURL = URL(fileURLWithPath: "/bin/sh")
-        cmd.arguments = ["-c", "cp -r /var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)/STAGING/* /"]
-        
-        try cmd.run()
-        cmd.waitUntilExit()
+        let installcmd = Process()
 
-        if cmd.terminationStatus != 0 {
+        installcmd.executableURL = URL(fileURLWithPath: "/bin/sh")
+        installcmd.arguments = ["-c", "cp -r /var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)/STAGING/* /"]
+        
+        try installcmd.run()
+        installcmd.waitUntilExit()
+
+        if installcmd.terminationStatus != 0 {
             print("\(Colored.red)>>> Error\(Colored.reset) while deploying to system package \(Colored.blue)\(package)\(Colored.reset) to system")
             return
         }
  
 
         stage(name: "post", i: 7, max: 8)
+        let postcmd = Process()
         if !buildFile.post.isEmpty {
             print("\(Colored.green)Running \(Colored.reset) post-install scripts for package \(Colored.blue)\(package)\(Colored.reset)")
-            cmd.executableURL = URL(fileURLWithPath: "/bin/sh")
-            cmd.arguments = ["-c", buildFile.post]
-            cmd.currentDirectoryURL = URL(fileURLWithPath: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")   
+            postcmd.executableURL = URL(fileURLWithPath: "/bin/sh")
+            postcmd.arguments = ["-c", buildFile.post]
+            postcmd.currentDirectoryURL = URL(fileURLWithPath: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")   
 
-            try cmd.run()
-            cmd.waitUntilExit()
+            try postcmd.run()
+            postcmd.waitUntilExit()
 
-            if cmd.terminationStatus != 0 {
+            if postcmd.terminationStatus != 0 {
                 print("\(Colored.red)>>> Error\(Colored.reset) while running post-install script for package \(Colored.blue)\(package)\(Colored.reset)")
                 return
             }
         }
-        
+
         stage(name: "cleanup", i: 8, max: 8)  
         print("\(Colored.yellow)Cleaning up\(Colored.reset) for package \(Colored.blue)\(package)\(Colored.reset)")
         try file.removeItem(atPath: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")
