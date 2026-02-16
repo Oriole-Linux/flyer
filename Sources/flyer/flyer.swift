@@ -24,6 +24,8 @@ struct Install: AsyncParsableCommand {
     func run() async throws {
         try Repo.sync()
 
+        let cmd = Process()
+
         let path = "\(Paths.base)/\(package)"
         let build = "\(path)/build.plist"
         let file = FileManager()
@@ -41,33 +43,116 @@ struct Install: AsyncParsableCommand {
 
         print("\(Bold.green)Found\(Colored.reset) \(package), starting build")
 
-        stage(name: "download", i: 1, max: 5)
+        stage(name: "download", i: 1, max: 8)
         print("\(Colored.green)Starting\(Colored.reset) download for \(Colored.blue)\(package)\(Colored.reset)")
 
-        guard let sourceURL = URL(string: buildFile.source) else {
+        guard let source = URL(string: buildFile.source) else {
             print("\(Colored.red)Error:\(Colored.reset) Invalid source URL: \(buildFile.source)")
             return
         }
         do {
-            let url = try await download(from: sourceURL)
+            let url = try await download(from: source)
             print("\(Colored.green)Download successful\(Colored.reset) for \(Colored.blue)\(package)\(Colored.reset) at path \(url.path)")
         } catch {
             print("\(Colored.red)Download failed\(Colored.reset) for \(Colored.blue)\(package)\(Colored.reset): \(error.localizedDescription)")
             return
         }
-        print("Configure")
 
-        stage(name: "build", i: 2, max: 4)
+        stage(name: "extract", i: 2, max: 8)
 
-        print ("Build")
+        try file.createDirectory(atPath: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)", withIntermediateDirectories: true)
 
-        stage(name: "stage", i: 3, max: 4)
+        cmd.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
+        if verbose {
+            cmd.arguments = ["xfv", "/var/cache/distfiles/\(source.lastPathComponent)", "-C", "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"]
+        } else {
+            cmd.arguments = ["xf", "/var/cache/distfiles/\(source.lastPathComponent)", "-C", "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"]
+        }
 
-        print("Staging")
+        try cmd.run()
+        cmd.waitUntilExit()
+        if cmd.terminationStatus != 0 {
+            print("\(Colored.red)>>> Error\(Colored.reset) while extracting archive for \(Colored.blue)\(package)\(Colored.reset)")
+            return
+        }
+        
+        stage(name: "configure", i: 3, max: 8)
+        print("\(Colored.green)Configuring\(Colored.reset) for package \(Colored.blue)\(package)\(Colored.reset)")
 
-        stage(name: "install", i: 4, max: 4)
+        cmd.executableURL = URL(fileURLWithPath: "/bin/sh")
+        cmd.arguments = ["-c", buildFile.configuring]
+        cmd.currentDirectoryURL = URL(fileURLWithPath: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")
+        
+        try cmd.run()
+        cmd.waitUntilExit()
 
-        print("Installing to system")        
+        if cmd.terminationStatus != 0 {
+            print("\(Colored.red)>>> Error\(Colored.reset) while configuring package \(Colored.blue)\(package)\(Colored.reset)")
+            return
+        }
+
+        stage(name: "build", i: 4, max: 8)
+        print("\(Colored.green)Building\(Colored.reset) for package \(Colored.blue)\(package)\(Colored.reset)")
+        cmd.executableURL = URL(fileURLWithPath: "/bin/sh")
+        cmd.arguments = ["-c", buildFile.build]
+        cmd.currentDirectoryURL = URL(fileURLWithPath: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")
+
+        try cmd.run()
+        cmd.waitUntilExit()
+
+        if cmd.terminationStatus != 0 {
+            print("\(Colored.red)>>> Error\(Colored.reset) while building package \(Colored.blue)\(package)\(Colored.reset)")
+            return
+        }
+
+        stage(name: "stage", i: 5, max: 8)
+        cmd.executableURL = URL(fileURLWithPath: "/bin/sh")
+        cmd.arguments = ["-c", buildFile.install]
+        cmd.currentDirectoryURL = URL(fileURLWithPath: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")   
+
+        try cmd.run()
+        cmd.waitUntilExit()
+
+        if cmd.terminationStatus != 0 {
+            print("\(Colored.red)>>> Error\(Colored.reset) while temporary installing package \(Colored.blue)\(package)\(Colored.reset)")
+            return
+        }
+
+        stage(name: "install", i: 6, max: 8)
+        print("\(Colored.green)Deploying\(Colored.reset) package \(Colored.blue)\(package)\(Colored.reset)")
+        cmd.executableURL = URL(fileURLWithPath: "/bin/sh")
+        cmd.arguments = ["-c", "cp -r /var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)/STAGING/* /"]
+        
+        try cmd.run()
+        cmd.waitUntilExit()
+
+        if cmd.terminationStatus != 0 {
+            print("\(Colored.red)>>> Error\(Colored.reset) while deploying to system package \(Colored.blue)\(package)\(Colored.reset) to system")
+            return
+        }
+ 
+
+        stage(name: "post", i: 7, max: 8)
+        if !buildFile.post.isEmpty {
+            print("\(Colored.green)Running \(Colored.reset) post-install scripts for package \(Colored.blue)\(package)\(Colored.reset)")
+            cmd.executableURL = URL(fileURLWithPath: "/bin/sh")
+            cmd.arguments = ["-c", buildFile.post]
+            cmd.currentDirectoryURL = URL(fileURLWithPath: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")   
+
+            try cmd.run()
+            cmd.waitUntilExit()
+
+            if cmd.terminationStatus != 0 {
+                print("\(Colored.red)>>> Error\(Colored.reset) while running post-install script for package \(Colored.blue)\(package)\(Colored.reset)")
+                return
+            }
+        }
+        
+        stage(name: "cleanup", i: 8, max: 8)  
+        print("\(Colored.yellow)Cleaning up\(Colored.reset) for package \(Colored.blue)\(package)\(Colored.reset)")
+        try file.removeItem(atPath: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")
+
+        print("\(Bold.green)Installation complete\(Colored.reset) for package \(Colored.blue)\(package)\(Colored.reset)!")
     }
 }
 

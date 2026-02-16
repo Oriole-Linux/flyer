@@ -15,9 +15,9 @@ func download(from url: URL) async throws -> URL {
     if !fm.fileExists(atPath: cache.path) {
         do {
             try fm.createDirectory(at: cache, withIntermediateDirectories: true, attributes: nil)
-            print("\(Colored.green)INFO:\(Colored.reset) Created cache directory at \(cache.path)")
+            print("\(Colored.green)>>> Created\(Colored.reset) cache directory at \(cache.path)")
         } catch {
-            print("\(Colored.red)Error: \(Colored.reset) Could not create cache directory at \(Colored.blue)\(cache.path)\(Colored.reset): \(error.localizedDescription)")
+            print("\(Colored.red)>>> Failed\(Colored.reset) to create cache directory at \(Colored.blue)\(cache.path)\(Colored.reset): \(error.localizedDescription)")
             throw error
         }
     }
