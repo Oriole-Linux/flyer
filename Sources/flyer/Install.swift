@@ -53,12 +53,9 @@ struct Install: AsyncParsableCommand {
 
         let path = "\(Paths.base)/\(package)"
         let build = "\(path)/build.plist"
-        let buildUrl = URL(fileURLWithPath: build)
         let file = FileManager()
-        let torepo = buildUrl.deletingLastPathComponent().deletingLastPathComponent().lastPathComponent 
-        let repo = torepo.isEmpty ? "unknown" : torepo
 
-        let buildFile = try decode(from: URL(fileURLWithPath: build))
+
         if verbose {
             print("\(Colored.green)[INSTALL]\(Colored.reset) Start deployment for package \(Colored.blue)\(package)\(Colored.reset)")
             print("\(Bold.cyan)Starting\(Colored.reset) tree check for package \(package)")
@@ -70,8 +67,6 @@ struct Install: AsyncParsableCommand {
         }
 
         let deps = try deps(for: package)
-        let type = installType(category: buildFile.category, name: buildFile.name, version: buildFile.version)
-        let color = type == .new ? Colored.green : Colored.blue
         let all = deps + [package]
 
         print("These packages would be installed, in order: ")
