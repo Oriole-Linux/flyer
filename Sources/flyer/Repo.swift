@@ -2,9 +2,15 @@ import Foundation
 import ArgumentParser
 
 struct Paths {
-    static let base = "/var/db/repos/oriole"
+    nonisolated(unsafe) static var base = "/var/db/repos/oriole"
     static let cache = "/var/cache/distfiles"
     static let db = "/var/db/flyer"
+    static func fetch() -> String {
+        return base
+    }
+    static func setTest() {
+        base = "/tmp/test-repo"
+    }
     static func check() throws {
         let file = FileManager.default
         if !file.fileExists(atPath: base) {
@@ -91,5 +97,12 @@ struct Repo {
         if cmd.terminationStatus != 0 {
             throw ExitCode.failure
         }
+    }
+
+}
+
+extension Repo {
+    static var exists: Bool {
+        FileManager.default.fileExists(atPath: Paths.base)
     }
 }

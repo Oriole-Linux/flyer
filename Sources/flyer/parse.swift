@@ -21,3 +21,24 @@ func decode(from url: URL) throws -> BuildFile {
     let decoder = PropertyListDecoder()
     return try decoder.decode(BuildFile.self, from: data)    
 }
+
+struct ParseTest {
+    func test_name() throws -> String {
+        let path = "/var/db/repos/oriole/app-misc/test/build.plist"
+        let buildFile = try decode(from: URL(fileURLWithPath: path))
+
+        return buildFile.name
+    }
+    func test_ver() throws -> String {
+        let path = "/var/db/repos/oriole/app-misc/test/build.plist"
+        let buildFile = try decode(from: URL(fileURLWithPath: path))
+
+        return buildFile.version
+    }
+    func test_cmd() throws -> String {
+        let path = "/var/db/repos/oriole/app-misc/test/build.plist"
+        let buildFile = try decode(from: URL(fileURLWithPath: path))
+
+        return buildFile.configuring
+    }
+}

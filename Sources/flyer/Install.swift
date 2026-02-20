@@ -46,6 +46,7 @@ struct Install: AsyncParsableCommand {
         try check(pkg: package)
         return toInstall
     }
+    
     func run() async throws {
         try Repo.sync()
 
