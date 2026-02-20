@@ -77,3 +77,7 @@ enum BackIntense {
 	static let cyan = "\u{001B}[0;106m"
 	static let white = "\u{001B}[0;107m"
 }
+
+func setTitle(title: String) {
+	print("\u{1B}]0;\(title)\u{007}", terminator: "")
+}

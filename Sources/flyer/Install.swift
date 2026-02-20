@@ -91,6 +91,7 @@ struct Install: AsyncParsableCommand {
         print("Total: \(Bold.yellow)\(total)\(Colored.reset) packages (\(Bold.yellow)\(count)\(Colored.reset) new, \(Bold.yellow)\(skip)\(Colored.reset) skipped)")
         if ask {
             var confirmed = false
+            setTitle(title: "flyer: install: ask: \(package)")
             while true {
                 print("\n\(Bold.yellow)Is this ok?\(Colored.reset) (yes/no)")
                 try? FileHandle.standardOutput.synchronize()
@@ -130,6 +131,7 @@ struct Install: AsyncParsableCommand {
             print("\(Bold.green)Found\(Colored.reset) \(package), starting build")
 
             stage(name: "download", i: 1, max: 9)
+
             print("\(Colored.green)Starting\(Colored.reset) download for \(Colored.blue)\(package)\(Colored.reset)")
 
             guard let source = URL(string: buildFile.source) else {

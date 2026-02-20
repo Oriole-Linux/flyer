@@ -24,6 +24,7 @@ struct Remove: ParsableCommand {
             print("\(Colored.red)[REMOVE]\(Colored.reset) Start removal for package \(Colored.blue)\(package)\(Colored.reset)")
         }
 
+        setTitle(title: "flyer: remove \(package)")
         print("Removing \(Colored.blue)\(package)\(Colored.reset)")
 
         let content = try String(contentsOfFile: contents, encoding: .utf8)
