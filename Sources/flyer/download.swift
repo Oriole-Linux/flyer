@@ -1,5 +1,5 @@
 import Foundation
-/* Some users might be running this on a Mac. For me, it was on Foundation built-in, so let's only do this on Linux hosts.*/
+/* Some users might be running this on a Mac. For me, it was on Foundation built-in, so let's only do this on Darwin hosts.*/
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif

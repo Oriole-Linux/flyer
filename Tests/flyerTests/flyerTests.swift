@@ -89,6 +89,19 @@ struct GitTest {
         let url = Paths.fetch()
         #expect(url == "/tmp/flyer-test-deps")
     }
+
+    @Test(.enabled(if: Repo.exists)) func syncCommand() async throws {
+        try Sync().run()
+
+        let git = "/var/db/repos/oriole/.git"
+        #expect(FileManager.default.fileExists(atPath: git))
+    }
+
+    @Test(.enabled(if: Repo.exists)) func cacheTest() async throws {
+        try Paths.checkCache()
+
+        #expect(FileManager.default.fileExists(atPath: "/var/cache/distfiles"))
+    }
 }
 
 // These tests only work if installed
