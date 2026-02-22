@@ -1,0 +1,5 @@
+To install, you need the Swift language (swift.org). An internet connection may be required (for sure on the first build) to download the argument parser.
+
+swift package clean
+swift build -c release
+cp .build/release/flyer <DESTINATION>
