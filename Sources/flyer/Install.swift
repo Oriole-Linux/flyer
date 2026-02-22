@@ -8,7 +8,7 @@ struct Install: AsyncParsableCommand {
     var package: String
 
     @Flag(name: .shortAndLong, help: "Show detailed output.")
-    var verbose = false
+    var verbose: Bool = false
 
     @Flag(name: .shortAndLong, help: "Ask for confirmation before installing.")
     var ask: Bool = false
@@ -46,7 +46,7 @@ struct Install: AsyncParsableCommand {
         try check(pkg: package)
         return toInstall
     }
-    
+
     func run() async throws {
         try Repo.sync()
 
@@ -56,6 +56,9 @@ struct Install: AsyncParsableCommand {
         let build = "\(path)/build.plist"
         let file = FileManager()
 
+        let package = self.package
+        let verbose = self.verbose
+        let ask = self.ask
 
         if verbose {
             print("\(Colored.green)[INSTALL]\(Colored.reset) Start deployment for package \(Colored.blue)\(package)\(Colored.reset)")
@@ -76,7 +79,7 @@ struct Install: AsyncParsableCommand {
             let path = "\(Paths.base)/\(pkg)/build.plist"
             let url = URL(fileURLWithPath: path)
             let build = try decode(from: url)
-            let repo = url.deletingLastPathComponent().deletingLastPathComponent().lastPathComponent
+            let repo = url.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().lastPathComponent
             let installed = installed(package: pkg)
             let status = installed ? "R" : "N"
             let color = installed ? Colored.blue : Colored.green
@@ -130,7 +133,7 @@ struct Install: AsyncParsableCommand {
 
             print("\(Bold.green)Found\(Colored.reset) \(package), starting build")
 
-            stage(name: "download", i: 1, max: 9)
+            stage(name: "download", i: 1, max: 9, pkg: pkg)
 
             print("\(Colored.green)Starting\(Colored.reset) download for \(Colored.blue)\(package)\(Colored.reset)")
 
@@ -146,7 +149,7 @@ struct Install: AsyncParsableCommand {
                 return
             }
 
-            stage(name: "extract", i: 2, max: 9)
+            stage(name: "extract", i: 2, max: 9, pkg: pkg)
 
             try file.createDirectory(atPath: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)", withIntermediateDirectories: true)
 
@@ -164,7 +167,7 @@ struct Install: AsyncParsableCommand {
                 return
             }
             
-            stage(name: "configure", i: 3, max: 9)
+            stage(name: "configure", i: 3, max: 9, pkg: pkg)
             print("\(Colored.green)Configuring\(Colored.reset) for package \(Colored.blue)\(package)\(Colored.reset)")
 
             let cfgcmd = Process()
@@ -180,7 +183,7 @@ struct Install: AsyncParsableCommand {
                 return
             }
 
-            stage(name: "build", i: 4, max: 9)
+            stage(name: "build", i: 4, max: 9, pkg: pkg)
             print("\(Colored.green)Building\(Colored.reset) for package \(Colored.blue)\(package)\(Colored.reset)")
 
             let buildcmd = Process()
@@ -197,7 +200,7 @@ struct Install: AsyncParsableCommand {
                 return
             }
 
-            stage(name: "staging install", i: 5, max: 9)
+            stage(name: "staging install", i: 5, max: 9, pkg: pkg)
             let stagecmd = Process()
 
             stagecmd.executableURL = URL(fileURLWithPath: "/bin/sh")
@@ -212,7 +215,7 @@ struct Install: AsyncParsableCommand {
                 return
             }
 
-            stage(name: "check", i: 6, max: 9)
+            stage(name: "check", i: 6, max: 9, pkg: pkg)
             print("\(Bold.yellow)Checking for file collisions...\(Colored.reset)")
 
             let staging = "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)/STAGING"
@@ -282,7 +285,7 @@ struct Install: AsyncParsableCommand {
                     }
                 }
             }
-            stage(name: "install", i: 7, max: 9)
+            stage(name: "install", i: 7, max: 9, pkg: pkg)
             print("\(Colored.green)Deploying\(Colored.reset) package \(Colored.blue)\(package)\(Colored.reset)")
             let installcmd = Process()
 
@@ -325,7 +328,7 @@ struct Install: AsyncParsableCommand {
             let fileContents = installed.joined(separator: "\n")
             try fileContents.write(toFile: contents, atomically: true, encoding: .utf8)
 
-            stage(name: "post", i: 8, max: 9)
+            stage(name: "post", i: 8, max: 9, pkg: pkg)
             let postcmd = Process()
             if !buildFile.post.isEmpty {
                 print("\(Colored.green)Running \(Colored.reset) post-install scripts for package \(Colored.blue)\(package)\(Colored.reset)")
@@ -342,7 +345,7 @@ struct Install: AsyncParsableCommand {
                 }
             }
 
-            stage(name: "cleanup", i: 9, max: 9)  
+            stage(name: "cleanup", i: 9, max: 9, pkg: pkg)  
             print("\(Colored.yellow)Cleaning up\(Colored.reset) for package \(Colored.blue)\(package)\(Colored.reset)")
             try file.removeItem(atPath: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")
 
