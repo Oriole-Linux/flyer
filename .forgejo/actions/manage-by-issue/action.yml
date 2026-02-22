@@ -84,7 +84,11 @@ runs:
     - id: run
       shell: bash
       run: |
-        nu -c '
+        export PATH="$PATH:$HOME/.cargo/bin:$HOME/.local/bin"
+
+        NU_BIN=$(command -v nu || echo "$HOME/.local/bin/nu")
+        
+        $NU_BIN -c '
         use "${{ github.action_path }}/../../vouch" *
 
         let vouch_kw = "${{ inputs.vouch-keyword }}" | split row "," | each { str trim } | where { $in | is-not-empty }
