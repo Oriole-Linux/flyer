@@ -78,15 +78,18 @@ runs:
   using: composite
   steps:
     - uses: hustcer/setup-nu@920172d92eb04671776f3ba69d605d3b09351c30 # v3.22
+      id: nu
       with:
         version: "0.110.0"
 
     - id: run
       shell: bash
       run: |
-        export PATH="$PATH:$HOME/.cargo/bin:$HOME/.local/bin"
-
-        NU_BIN=$(command -v nu || echo "$HOME/.local/bin/nu")
+        NU_BIN="${{ steps.setup-nu.outputs.nu-path }}"
+        
+        if [ -z "$NU_BIN" ]; then
+          NU_BIN="/root/.cargo/bin/nu"
+        fi
         
         $NU_BIN -c '
         use "${{ github.action_path }}/../../vouch" *
