@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: .forgejo/actions/manage-by-issue
+      - uses: ./.forgejo/actions/manage-by-issue
         with:
           issue-id: ${{ github.event.issue.number }}
           comment-id: ${{ github.event.comment.id }}
