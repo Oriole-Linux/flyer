@@ -85,7 +85,7 @@ runs:
     - id: run
       shell: bash
       run: |
-        NU_BIN="${{ steps.setup-nu.outputs.nu-path }}"
+        NU_BIN="${{ steps.nu.outputs.nu-path }}"
         
         if [ -z "$NU_BIN" ]; then
           NU_BIN="/root/.cargo/bin/nu"
