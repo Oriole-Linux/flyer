@@ -7,7 +7,7 @@ struct flyer: AsyncParsableCommand {
         commandName: "flyer",
         abstract: "Source-based package manager in Swift",
         version: "0.1.0",
-        subcommands: [Install.self, Remove.self, Sync.self]
+        subcommands: [Install.self, Remove.self, Sync.self, Info.self]
     )
 }
 
