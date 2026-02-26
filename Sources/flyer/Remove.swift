@@ -10,9 +10,23 @@ struct Remove: ParsableCommand {
     @Flag(name: .shortAndLong, help: "Show detailed output.")
     var verbose = false
     
+    @Option(name: .shortAndLong, help: "Target directory (by default /)")
+    var root: String = "/"
+
+    func pdec(path: String) -> String {
+        if root == "/" { return path }
+        return "\(root)/\(path)".replacingOccurrences(of: "//", with: "/")
+    }
+
     func run() throws {
+        guard NSUserName() != "root" else {
+            print("\(Colored.red)Error:\(Colored.reset) You are not running flyer as root. This won't work.")
+            print("\(Colored.yellow)Tip:\(Colored.reset) Try rerunning flyer with \(Colored.cyan)sudo\(Colored.reset).")
+            return
+        }
+
         let file = FileManager.default
-        let db = "/var/db/flyer/packages/\(package)"
+        let db = pdec(path: "/var/db/flyer/packages/\(package)")
         let contents = "\(db)/CONTENTS"
 
         guard file.fileExists(atPath: contents) else {
@@ -24,7 +38,7 @@ struct Remove: ParsableCommand {
             print("\(Colored.red)[REMOVE]\(Colored.reset) Start removal for package \(Colored.blue)\(package)\(Colored.reset)")
         }
 
-        setTitle(title: "flyer: remove \(package)")
+        print("\u{1b}]0;flyer: remove \(package)\u{07}", terminator: "")
         print("Removing \(Colored.blue)\(package)\(Colored.reset)")
 
         let content = try String(contentsOfFile: contents, encoding: .utf8)

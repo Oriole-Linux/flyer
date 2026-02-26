@@ -2,9 +2,17 @@ import Foundation
 import ArgumentParser
 
 struct Paths {
-    nonisolated(unsafe) static var base = "/var/db/repos/oriole"
-    static let cache = "/var/cache/distfiles"
-    static let db = "/var/db/flyer"
+    nonisolated(unsafe) static var root = "/"
+
+    static func pdec(path: String) -> String {
+        if root == "/" { return path }
+        return "\(root)/\(path)".replacingOccurrences(of: "//", with: "/")
+    }
+
+    nonisolated(unsafe) static var base = pdec(path: "/var/db/repos/oriole")
+    static let cache = pdec(path: "/var/cache/distfiles")
+    static let db = pdec(path: "/var/db/flyer")
+
     static func fetch() -> String {
         return base
     }
@@ -72,7 +80,7 @@ struct Paths {
 }
 
 struct Repo {
-    static let repo = "https://github.com/Oriole-Linux/packages"
+    static let repo = "https://codeberg.org/oriole/packages"
 
     static func sync() throws {
         try Paths.check()

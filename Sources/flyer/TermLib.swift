@@ -78,6 +78,3 @@ enum BackIntense {
 	static let white = "\u{001B}[0;107m"
 }
 
-func setTitle(title: String) {
-	print("\u{1B}]0;\(title)\u{007}", terminator: "")
-}

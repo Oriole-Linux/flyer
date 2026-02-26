@@ -146,6 +146,8 @@ struct Install: AsyncParsableCommand {
 
             print("\(Bold.green)Found\(Colored.reset) \(package), starting build")
 
+            let status = installed(package: pkg) ? "r" : "n"
+
             stage(name: "download", i: 1, max: 9, pkg: pkg)
 
             print("\(Colored.green)Starting\(Colored.reset) download for \(Colored.blue)\(package)\(Colored.reset)")
@@ -249,58 +251,63 @@ struct Install: AsyncParsableCommand {
                 }
             }
 
-            if !collisions.isEmpty {
-                print("\(Colored.red)!!!\(Colored.reset) \(Colored.yellow)Collisions detected\(Colored.reset)")
-                if !verbose {
-                    for c in collisions.prefix(10) { 
-                        print("\(Colored.red)*\(Colored.reset) \(c)")
-                    }
-                    if collisions.count > 10 {
-                        print("and \(collisions.count) more.")
-                    }
-                } else {
-                    print("Showing full list of file collisions")
-                    for c in collisions {
-                        print("\(Colored.red)*\(Colored.reset) \(c)")
-                    }
-                }
-
-                print("If you don't know where these files came from or you don't need them, you can safely ignore this warning.")
-                print("\(Bold.red)If you need these files in their current version, it's best to cancel.\(Colored.reset)")
-
-                if ask {
-                    print("\n\(Bold.yellow)Is this ok?\(Colored.reset) (yes/no)")
-                    try? FileHandle.standardOutput.synchronize()
-
-                    if let response = readLine()?.lowercased(), response == "yes" || response == "y" {
-                        print("\(Colored.green)Continuing installation.\(Colored.reset)")
+            if status == "n" {
+                if !collisions.isEmpty {
+                    print("\(Colored.red)!!!\(Colored.reset) \(Colored.yellow)Collisions detected\(Colored.reset)")
+                    if !verbose {
+                        for c in collisions.prefix(10) { 
+                            print("\(Colored.red)*\(Colored.reset) \(c)")
+                        }
+                        if collisions.count > 10 {
+                            print("and \(collisions.count) more.")
+                        }
                     } else {
-                        print("\(Colored.red)Cancelled.\(Colored.reset)")
-                        return
+                        print("Showing full list of file collisions")
+                        for c in collisions {
+                            print("\(Colored.red)*\(Colored.reset) \(c)")
+                        }
                     }
-                } else {
-                    for i in (1...10).reversed() {
-                        print("\rWaiting \(i) seconds before installing...")
+
+                    print("If you don't know where these files came from or you don't need them, you can safely ignore this warning.")
+                    print("\(Bold.red)If you need these files in their current version, it's best to cancel.\(Colored.reset)")
+
+                    if ask {
+                        print("\n\(Bold.yellow)Is this ok?\(Colored.reset) (yes/no)")
                         try? FileHandle.standardOutput.synchronize()
 
-                        let input = await Task.detached {
-                            var descriptor = pollfd(fd: STDIN_FILENO, events: Int16(POLLIN), revents: 0)
-                            let result = poll(&descriptor, 1, 1000)
-                            return result > 0
-                        }.value
-
-                        if input {
-                            _ = readLine()
-                            print("\n\(Colored.green)Starting install\(Colored.reset)")
-                            break
+                        if let response = readLine()?.lowercased(), response == "yes" || response == "y" {
+                            print("\(Colored.green)Continuing installation.\(Colored.reset)")
+                        } else {
+                            print("\(Colored.red)Cancelled.\(Colored.reset)")
+                            return
                         }
+                    } else {
+                        for i in (1...10).reversed() {
+                            print("\rWaiting \(i) seconds before installing...")
+                            try? FileHandle.standardOutput.synchronize()
 
-                        if i == 1 {
-                            print("\n\(Colored.yellow)Forcing install start, time's over.\(Colored.reset)")
+                            let input = await Task.detached {
+                                var descriptor = pollfd(fd: STDIN_FILENO, events: Int16(POLLIN), revents: 0)
+                                let result = poll(&descriptor, 1, 1000)
+                                return result > 0
+                            }.value
+
+                            if input {
+                                _ = readLine()
+                                print("\n\(Colored.green)Starting install\(Colored.reset)")
+                                break
+                            }
+
+                            if i == 1 {
+                                print("\n\(Colored.yellow)Forcing install start, time's over.\(Colored.reset)")
+                            }
                         }
                     }
                 }
+            } else {
+                print("\(Colored.cyan)Skipping\(Colored.reset) package check as rebuilding.")
             }
+
             stage(name: "install", i: 7, max: 9, pkg: pkg)
             print("\(Colored.green)Deploying\(Colored.reset) package \(Colored.blue)\(package)\(Colored.reset)")
             let installcmd = Process()
