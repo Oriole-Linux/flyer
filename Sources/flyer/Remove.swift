@@ -10,16 +10,17 @@ struct Remove: ParsableCommand {
     @Flag(name: .shortAndLong, help: "Show detailed output.")
     var verbose = false
     
-    @Option(name: .shortAndLong, help: "Target directory (by default /)")
+    @Option(name: .shortAndLong, help: "Target directory (by default /). Relative paths will be normalised.")
     var root: String = "/"
 
     func pdec(path: String) -> String {
-        if root == "/" { return path }
-        return "\(root)/\(path)".replacingOccurrences(of: "//", with: "/")
+        let prefix = root.hasPrefix("/") ? root : "/\(root)"
+        if prefix == "/" { return path }
+        return "\(prefix)\(path)".replacingOccurrences(of: "//", with: "/")
     }
 
     func run() throws {
-        guard NSUserName() != "root" else {
+        guard NSUserName() == "root" else {
             print("\(Colored.red)Error:\(Colored.reset) You are not running flyer as root. This won't work.")
             print("\(Colored.yellow)Tip:\(Colored.reset) Try rerunning flyer with \(Colored.cyan)sudo\(Colored.reset).")
             return
