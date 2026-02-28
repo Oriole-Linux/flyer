@@ -19,6 +19,26 @@
             "target": "flyer",
             "configuration": "release",
             "preLaunchTask": "swift: Build Release flyer"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:flyer}",
+            "name": "Debug FlyerTests",
+            "target": "FlyerTests",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug FlyerTests"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:flyer}",
+            "name": "Release FlyerTests",
+            "target": "FlyerTests",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release FlyerTests"
         }
     ]
 }

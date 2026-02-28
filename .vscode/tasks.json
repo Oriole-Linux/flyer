@@ -1,0 +1,21 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "swift",
+			"args": [
+				"build",
+				"--product",
+				"flyer"
+			],
+			"env": {},
+			"cwd": "/home/george/code/swift/flyer",
+			"disableTaskQueue": true,
+			"dontTriggerTestDiscovery": true,
+			"group": "build",
+			"problemMatcher": [],
+			"label": "swift: Build Debug flyer (flyer)",
+			"detail": "swift build --product flyer"
+		}
+	]
+}
