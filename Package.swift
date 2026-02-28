@@ -17,6 +17,12 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),
+        // .executableTarget(
+           // name: "dpltool",
+            // dependencies: [
+               // .product(name: "ArgumentParser", package: "swift-argument-parser")
+            // ]
+        // ),
         .testTarget(
             name: "flyerTests",
             dependencies: ["flyer"]

@@ -1,5 +1,10 @@
 import Foundation
 import ArgumentParser
+#if canImport(Glibc)
+import Glibc
+#elseif canImport(Darwin)
+import Darwin
+#endif
 
 struct Install: AsyncParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Install a package")
@@ -17,8 +22,9 @@ struct Install: AsyncParsableCommand {
     var root: String = "/"
     
     func pdec(path: String) -> String {
-        if root == "/" { return path }
-        return "\(root)/\(path)".replacingOccurrences(of: "//", with: "/")
+        let prefix = root.hasPrefix("/") ? root : "\(root)"
+        if prefix == "/" { return path }
+        return "\(prefix)\(path)".replacingOccurrences(of: "//", with: "/")
     }
 
     func installed(package: String) -> Bool {
@@ -34,7 +40,7 @@ struct Install: AsyncParsableCommand {
             if seen.contains(pkg) { return }
             seen.insert(pkg)
 
-            let path = pdec(path: "\(Paths.base)/\(pkg)/build.plist")
+            let path = "\(Paths.base)/\(pkg)/build.plist"
             let buildFile = try decode(from: URL(fileURLWithPath: path))
 
             for dep in buildFile.deps {
@@ -65,8 +71,8 @@ struct Install: AsyncParsableCommand {
 
         let cmd = Process()
 
-        let path = pdec(path: "\(Paths.base)/\(package)")
-        let build = pdec(path: "\(path)/build.plist")
+        let repoPath = "\(Paths.base)/\(package)"
+        let build = "\(repoPath)/build.plist"
         let file = FileManager()
 
         let package = self.package
@@ -89,7 +95,7 @@ struct Install: AsyncParsableCommand {
         print("These packages would be installed, in order: ")
 
         for pkg in all {
-            let path = pdec(path: "\(Paths.base)/\(pkg)/build.plist")
+            let path = "\(Paths.base)/\(pkg)/build.plist"
             let url = URL(fileURLWithPath: path)
             let build = try decode(from: url)
             let repo = url.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().lastPathComponent
@@ -109,6 +115,7 @@ struct Install: AsyncParsableCommand {
             var confirmed = false
             print("\u{1b}]0;flyer: install: ask: \(package)\u{07}", terminator: "")
             while true {
+
                 print("\n\(Bold.yellow)Is this ok?\(Colored.reset) (yes/no)")
                 try? FileHandle.standardOutput.synchronize()
 
@@ -133,24 +140,23 @@ struct Install: AsyncParsableCommand {
             }
         }
 
-        for pkg in all { 
-
+        for pkg in all {
             if pkg != package && self.installed(package: pkg) {
                 if verbose {
                     print("\(Colored.purple)Skipping\(Colored.reset) package \(pkg)")
                 }
             }
 
-            let buildPath = pdec(path: "\(Paths.base)/\(pkg)/build.plist")
+            let buildPath = "\(Paths.base)/\(pkg)/build.plist"
             let buildFile = try decode(from: URL(fileURLWithPath: buildPath))
 
-            print("\(Bold.green)Found\(Colored.reset) \(package), starting build")
+            print("\(Bold.green)Found\(Colored.reset) \(pkg), starting build")
 
             let status = installed(package: pkg) ? "r" : "n"
 
             stage(name: "download", i: 1, max: 9, pkg: pkg)
 
-            print("\(Colored.green)Starting\(Colored.reset) download for \(Colored.blue)\(package)\(Colored.reset)")
+            print("\(Colored.green)Starting\(Colored.reset) download for \(Colored.blue)\(pkg)\(Colored.reset)")
 
             guard let source = URL(string: buildFile.source) else {
                 print("\(Colored.red)Error:\(Colored.reset) Invalid source URL: \(buildFile.source)")
@@ -158,9 +164,9 @@ struct Install: AsyncParsableCommand {
             }
             do {
                 let url = try await download(from: source)
-                print("\(Colored.green)Download successful\(Colored.reset) for \(Colored.blue)\(package)\(Colored.reset) at path \(url.path)")
+                print("\(Colored.green)Download successful\(Colored.reset) for \(Colored.blue)\(pkg)\(Colored.reset) at path \(url.path)")
             } catch {
-                print("\(Colored.red)Download failed\(Colored.reset) for \(Colored.blue)\(package)\(Colored.reset): \(error.localizedDescription)")
+                print("\(Colored.red)Download failed\(Colored.reset) for \(Colored.blue)\(pkg)\(Colored.reset): \(error.localizedDescription)")
                 return
             }
 
@@ -168,7 +174,7 @@ struct Install: AsyncParsableCommand {
 
             try file.createDirectory(atPath: pdec(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"), withIntermediateDirectories: true)
 
-            let cache = pdec(path: "/var/cache/distfiles/\(source.lastPathComponent)")
+            let cache = "/var/cache/distfiles/\(source.lastPathComponent)"
             let extract = pdec(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")
 
             cmd.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
@@ -177,16 +183,17 @@ struct Install: AsyncParsableCommand {
             } else {
                 cmd.arguments = ["xf", "\(cache)", "-C", "\(extract)"]
             }
+            
 
-            try cmd.run()
+            try cmd.run()  
             cmd.waitUntilExit()
             if cmd.terminationStatus != 0 {
-                print("\(Colored.red)>>> Error\(Colored.reset) while extracting archive for \(Colored.blue)\(package)\(Colored.reset)")
+                print("\(Colored.red)>>> Error\(Colored.reset) while extracting archive for \(Colored.blue)\(pkg)\(Colored.reset)")
                 return
             }
-            
+
             stage(name: "configure", i: 3, max: 9, pkg: pkg)
-            print("\(Colored.green)Configuring\(Colored.reset) for package \(Colored.blue)\(package)\(Colored.reset)")
+            print("\(Colored.green)Configuring\(Colored.reset) for package \(Colored.blue)\(pkg)\(Colored.reset)")
 
             let cfgcmd = Process()
             cfgcmd.executableURL = URL(fileURLWithPath: "/bin/sh")
@@ -197,12 +204,12 @@ struct Install: AsyncParsableCommand {
             cfgcmd.waitUntilExit()
 
             if cfgcmd.terminationStatus != 0 {
-                print("\(Colored.red)>>> Error\(Colored.reset) while configuring package \(Colored.blue)\(package)\(Colored.reset)")
+                print("\(Colored.red)>>> Error\(Colored.reset) while configuring package \(Colored.blue)\(pkg)\(Colored.reset)")
                 return
             }
 
             stage(name: "build", i: 4, max: 9, pkg: pkg)
-            print("\(Colored.green)Building\(Colored.reset) for package \(Colored.blue)\(package)\(Colored.reset)")
+            print("\(Colored.green)Building\(Colored.reset) for package \(Colored.blue)\(pkg)\(Colored.reset)")
 
             let buildcmd = Process()
 
@@ -214,10 +221,11 @@ struct Install: AsyncParsableCommand {
             buildcmd.waitUntilExit()
 
             if buildcmd.terminationStatus != 0 {
-                print("\(Colored.red)>>> Error\(Colored.reset) while building package \(Colored.blue)\(package)\(Colored.reset)")
+                print("\(Colored.red)>>> Error\(Colored.reset) while building package \(Colored.blue)\(pkg)\(Colored.reset)")
                 return
             }
 
+            
             stage(name: "staging install", i: 5, max: 9, pkg: pkg)
             let stagecmd = Process()
 
@@ -229,7 +237,7 @@ struct Install: AsyncParsableCommand {
             stagecmd.waitUntilExit()
 
             if stagecmd.terminationStatus != 0 {
-                print("\(Colored.red)>>> Error\(Colored.reset) while temporary installing package \(Colored.blue)\(package)\(Colored.reset)")
+                print("\(Colored.red)>>> Error\(Colored.reset) while temporary installing package \(Colored.blue)\(pkg)\(Colored.reset)")
                 return
             }
 
@@ -275,7 +283,7 @@ struct Install: AsyncParsableCommand {
                         print("\n\(Bold.yellow)Is this ok?\(Colored.reset) (yes/no)")
                         try? FileHandle.standardOutput.synchronize()
 
-                        if let response = readLine()?.lowercased(), response == "yes" || response == "y" {
+                        if let response = readLine()?.lowercased(), (response == "yes" || response == "y") {
                             print("\(Colored.green)Continuing installation.\(Colored.reset)")
                         } else {
                             print("\(Colored.red)Cancelled.\(Colored.reset)")
@@ -309,7 +317,7 @@ struct Install: AsyncParsableCommand {
             }
 
             stage(name: "install", i: 7, max: 9, pkg: pkg)
-            print("\(Colored.green)Deploying\(Colored.reset) package \(Colored.blue)\(package)\(Colored.reset)")
+            print("\(Colored.green)Deploying\(Colored.reset) package \(Colored.blue)\(pkg)\(Colored.reset)")
             let installcmd = Process()
 
             let rootstg = pdec(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)/STAGING")
@@ -320,12 +328,12 @@ struct Install: AsyncParsableCommand {
             installcmd.waitUntilExit()
 
             if installcmd.terminationStatus != 0 {
-                print("\(Colored.red)>>> Error\(Colored.reset) while deploying to system package \(Colored.blue)\(package)\(Colored.reset) to system")
+                print("\(Colored.red)>>> Error\(Colored.reset) while deploying to system package \(Colored.blue)\(pkg)\(Colored.reset) to system")
                 return
             }
-
-            print("\(Colored.green)Installed\(Colored.reset) package \(Colored.blue)\(package)\(Colored.reset)")
-            print("\(Colored.blue)>>> Registering package\(Colored.reset) \(Colored.reset)\(package)\(Colored.reset)")
+        
+            print("\(Colored.green)Installed\(Colored.reset) package \(Colored.blue)\(pkg)\(Colored.reset)")
+            print("\(Colored.blue)>>> Registering package\(Colored.reset) \(Colored.reset)\(pkg)\(Colored.reset)")
             
             let prefix = "STAGING/"
             let db = pdec(path: "/var/db/flyer/packages/\(buildFile.category)/\(buildFile.name)")
@@ -354,7 +362,7 @@ struct Install: AsyncParsableCommand {
             stage(name: "post", i: 8, max: 9, pkg: pkg)
             let postcmd = Process()
             if !buildFile.post.isEmpty {
-                print("\(Colored.green)Running \(Colored.reset) post-install scripts for package \(Colored.blue)\(package)\(Colored.reset)")
+                print("\(Colored.green)Running \(Colored.reset) post-install scripts for package \(Colored.blue)\(pkg)\(Colored.reset)")
                 postcmd.executableURL = URL(fileURLWithPath: "/bin/sh")
                 postcmd.arguments = ["-c", buildFile.post]
                 postcmd.currentDirectoryURL = URL(fileURLWithPath: pdec(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"))   
@@ -363,16 +371,16 @@ struct Install: AsyncParsableCommand {
                 postcmd.waitUntilExit()
 
                 if postcmd.terminationStatus != 0 {
-                    print("\(Colored.red)>>> Error\(Colored.reset) while running post-install script for package \(Colored.blue)\(package)\(Colored.reset)")
+                    print("\(Colored.red)>>> Error\(Colored.reset) while running post-install script for package \(Colored.blue)\(pkg)\(Colored.reset)")
                     return
                 }
             }
 
             stage(name: "cleanup", i: 9, max: 9, pkg: pkg)  
-            print("\(Colored.yellow)Cleaning up\(Colored.reset) for package \(Colored.blue)\(package)\(Colored.reset)")
+            print("\(Colored.yellow)Cleaning up\(Colored.reset) for package \(Colored.blue)\(pkg)\(Colored.reset)")
             try file.removeItem(atPath: pdec(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"))
 
-            print("\(Bold.green)Installation complete\(Colored.reset) for package \(Colored.blue)\(package)\(Colored.reset)!")
+            print("\(Bold.green)Installation complete\(Colored.reset) for package \(Colored.blue)\(pkg)\(Colored.reset)!")
         }
     }
 }

@@ -117,7 +117,7 @@ struct GitTest {
 
 
 @Test func stage() async throws {
-    let output = stage(name: "testing", i: 1, max: 1)
+    let output = stage(name: "testing", i: 1, max: 1, pkg: "testing")
 
     #expect(output == "\u{001B}[33m>>> Starting stage\u{001B}[0m testing (\u{001B}[1;33m1\u{001B}[0m of \u{001B}[1;34m1\u{001B}[0m)")
 }
@@ -138,6 +138,38 @@ struct InstallTest {
         let cmd = try Install.parse(args)
         let res = cmd.installed(package: "idont/exist")
         #expect(res == false)
+    }
+
+    @Test func root() throws {
+        var cmd = try Install.parse(["pkg", "--root", "devenv"])
+        let normalized = cmd.pdec(path: "/var/db/test")
+        #expect(normalized == "/devenv/var/db/test")
+
+        let cmd2 = try Install.parse(["pkg", "--root", "/devenv"])
+        let normalized2 = cmd2.pdec(path: "/var/db/test")
+        #expect(normalized2 == "/devenv/var/db/test")
+
+        let base = "/tmp/flyer-test-deps"
+        try? FileManager.default.removeItem(atPath: base)
+        Paths.base = base
+        defer {
+            Paths.base = base
+            try? FileManager.default.removeItem(atPath: base)
+        }
+
+        try testPackage(name: "sys-libs/B", deps: [], at: base)
+        try testPackage(name: "sys-apps/A", deps: ["sys-libs/B"], at: base)
+
+        cmd.root = "devenv"
+        let toInstall = try cmd.deps(for: "sys-apps/A")
+        #expect(toInstall.count == 1)
+        #expect(toInstall.first == "sys-libs/B")
+    }
+
+    @Test func removeRootNormalization() throws {
+        let cmd = try Remove.parse(["pkg", "--root", "devenv"])
+        let normalized = cmd.pdec(path: "/var/db/test")
+        #expect(normalized == "/devenv/var/db/test")
     }
 
     @Test func deps() async throws {

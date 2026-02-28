@@ -8,3 +8,4 @@ DerivedData/
 .netrc
 .vscode/
 Sources/flyer/flyer.code-workspace
+Sources/dpltool/

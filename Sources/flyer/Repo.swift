@@ -5,8 +5,9 @@ struct Paths {
     nonisolated(unsafe) static var root = "/"
 
     static func pdec(path: String) -> String {
-        if root == "/" { return path }
-        return "\(root)/\(path)".replacingOccurrences(of: "//", with: "/")
+        let prefix = root.hasPrefix("/") ? root : "/\(root)"
+        if prefix == "/" { return path }
+        return "\(prefix)\(path)".replacingOccurrences(of: "//", with: "/")
     }
 
     nonisolated(unsafe) static var base = pdec(path: "/var/db/repos/oriole")
