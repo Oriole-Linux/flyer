@@ -44,8 +44,8 @@ struct Install: AsyncParsableCommand {
             let buildFile = try decode(from: URL(fileURLWithPath: path))
 
             for dep in buildFile.deps {
+                try check(pkg: dep)
                 if !installed(package: dep) {
-                    try check(pkg: dep)
                     if !toInstall.contains(dep) {
                         toInstall.append(dep)
                     }
