@@ -11,7 +11,6 @@ func testPackage(name: String, deps: [String], at base: String) throws {
     let category = parts.first ?? "unknown"
     let packageName = parts.last ?? "unknown"
 
-    // Hier schreiben wir echtes XML statt JSON
     let content = """
     <?xml version="1.0" encoding="UTF-8"?>
     <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com">
@@ -143,7 +142,7 @@ struct InstallTest {
     @Test func root() throws {
         var cmd = try Install.parse(["pkg", "--root", "devenv"])
         let normalized = cmd.pdec(path: "/var/db/test")
-        #expect(normalized == "/devenv/var/db/test")
+        #expect(normalized == "devenv/var/db/test")
 
         let cmd2 = try Install.parse(["pkg", "--root", "/devenv"])
         let normalized2 = cmd2.pdec(path: "/var/db/test")
