@@ -104,6 +104,7 @@ struct Repo {
         try cmd.run()
         cmd.waitUntilExit()
         if cmd.terminationStatus != 0 {
+            print("\(Bold.red)Failed\(Colored.reset) to sync repository, are you root? \n \(Colored.yellow)Tip: try rerunning this command with \(Bold.blue)sudo\(Colored.reset).")
             throw ExitCode.failure
         }
     }

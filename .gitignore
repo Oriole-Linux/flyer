@@ -9,3 +9,4 @@ DerivedData/
 // .vscode/
 Sources/flyer/flyer.code-workspace
 Sources/dpltool/
+Dockerfile
