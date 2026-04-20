@@ -69,8 +69,6 @@ struct Install: AsyncParsableCommand {
         }
         try Repo.sync()
 
-        let cmd = Process()
-
         let repoPath = "\(Paths.base)/\(package)"
         let build = "\(repoPath)/build.plist"
         let file = FileManager()
@@ -177,6 +175,8 @@ struct Install: AsyncParsableCommand {
             let cache = "/var/cache/distfiles/\(source.lastPathComponent)"
             let extract = pdec(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")
 
+            let cmd = Process()
+            
             cmd.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
             if verbose {
                 cmd.arguments = ["xfv", "\(cache)", "-C", "\(extract)"]
