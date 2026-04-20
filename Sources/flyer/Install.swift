@@ -67,11 +67,32 @@ struct Install: AsyncParsableCommand {
             print("\(Colored.yellow)Tip:\(Colored.reset) Try rerunning flyer with \(Colored.cyan)sudo\(Colored.reset).")
             return
         }
+        
+        let file = FileManager.default
+        let absolute: String
+        if root == "/" {
+            absolute = "/"
+        } else if root.starts(with: "/") {
+            absolute = root
+        } else {
+            absolute = file.currentDirectoryPath + "/" + root
+        }
+        
+        func pdecLocal(path: String) -> String {
+            let prefix = absolute == "/" ? "/" : absolute
+            if prefix == "/" { return path }
+            return "\(prefix)\(path)".replacingOccurrences(of: "//", with: "/")
+        }
+        
+        func installedLocal(package: String) -> Bool {
+            let db = pdecLocal(path: "/var/db/flyer/packages/\(package)")
+            return file.fileExists(atPath: db)
+        }
+        
         try Repo.sync()
 
         let repoPath = "\(Paths.base)/\(package)"
         let build = "\(repoPath)/build.plist"
-        let file = FileManager()
 
         let package = self.package
         let verbose = self.verbose
@@ -97,7 +118,7 @@ struct Install: AsyncParsableCommand {
             let url = URL(fileURLWithPath: path)
             let build = try decode(from: url)
             let repo = url.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().lastPathComponent
-            let installed = installed(package: pkg)
+            let installed = installedLocal(package: pkg)
             let status = installed ? "R" : "N"
             let color = installed ? Colored.blue : Colored.green
 
@@ -105,7 +126,7 @@ struct Install: AsyncParsableCommand {
         }
 
         let total = all.count
-        let count = all.filter { !self.installed(package: $0) }.count
+        let count = all.filter { !installedLocal(package: $0) }.count
         let skip = total - count
 
         print("Total: \(Bold.yellow)\(total)\(Colored.reset) packages (\(Bold.yellow)\(count)\(Colored.reset) new, \(Bold.yellow)\(skip)\(Colored.reset) skipped)")
@@ -117,7 +138,11 @@ struct Install: AsyncParsableCommand {
                 print("\n\(Bold.yellow)Is this ok?\(Colored.reset) (yes/no)")
                 try? FileHandle.standardOutput.synchronize()
 
-                guard let input = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) else {
+                let input = DispatchQueue.global().sync {
+                    readLine()?.lowercased().trimmingCharacters(in: .whitespaces)
+                }
+                
+                guard let input = input else {
                     continue
                 }
 
@@ -139,7 +164,7 @@ struct Install: AsyncParsableCommand {
         }
 
         for pkg in all {
-            if pkg != package && self.installed(package: pkg) {
+            if pkg != package && installedLocal(package: pkg) {
                 if verbose {
                     print("\(Colored.purple)Skipping\(Colored.reset) package \(pkg)")
                 }
@@ -170,10 +195,10 @@ struct Install: AsyncParsableCommand {
 
             stage(name: "extract", i: 2, max: 9, pkg: pkg)
 
-            try file.createDirectory(atPath: pdec(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"), withIntermediateDirectories: true)
+            try file.createDirectory(atPath: pdecLocal(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"), withIntermediateDirectories: true)
 
             let cache = "/var/cache/distfiles/\(source.lastPathComponent)"
-            let extract = pdec(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")
+            let extract = pdecLocal(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)")
 
             let cmd = Process()
             
@@ -198,7 +223,7 @@ struct Install: AsyncParsableCommand {
             let cfgcmd = Process()
             cfgcmd.executableURL = URL(fileURLWithPath: "/bin/sh")
             cfgcmd.arguments = ["-c", buildFile.configuring]
-            cfgcmd.currentDirectoryURL = URL(fileURLWithPath: pdec(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"))
+            cfgcmd.currentDirectoryURL = URL(fileURLWithPath: pdecLocal(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"))
             
             try cfgcmd.run()
             cfgcmd.waitUntilExit()
@@ -215,7 +240,7 @@ struct Install: AsyncParsableCommand {
 
             buildcmd.executableURL = URL(fileURLWithPath: "/bin/sh")
             buildcmd.arguments = ["-c", buildFile.build]
-            buildcmd.currentDirectoryURL = URL(fileURLWithPath: pdec(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"))
+            buildcmd.currentDirectoryURL = URL(fileURLWithPath: pdecLocal(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"))
 
             try buildcmd.run()
             buildcmd.waitUntilExit()
@@ -231,7 +256,7 @@ struct Install: AsyncParsableCommand {
 
             stagecmd.executableURL = URL(fileURLWithPath: "/bin/sh")
             stagecmd.arguments = ["-c", buildFile.install]
-            stagecmd.currentDirectoryURL = URL(fileURLWithPath: pdec(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"))   
+            stagecmd.currentDirectoryURL = URL(fileURLWithPath: pdecLocal(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"))   
 
             try stagecmd.run()
             stagecmd.waitUntilExit()
@@ -244,12 +269,12 @@ struct Install: AsyncParsableCommand {
             stage(name: "check", i: 6, max: 9, pkg: pkg)
             print("\(Bold.yellow)Checking for file collisions...\(Colored.reset)")
 
-            let staging = pdec(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)/STAGING")
+            let staging = pdecLocal(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)/STAGING")
             let check_enumerator = file.enumerator(atPath: staging) 
             var collisions: [String] = []
 
             while let rel = check_enumerator?.nextObject() as? String {
-                let targetPath = pdec(path: "/") + rel
+                let targetPath = pdecLocal(path: "/") + rel
                 var isDir: ObjCBool = false
 
                 if file.fileExists(atPath: targetPath, isDirectory: &isDir) {
@@ -283,7 +308,11 @@ struct Install: AsyncParsableCommand {
                         print("\n\(Bold.yellow)Is this ok?\(Colored.reset) (yes/no)")
                         try? FileHandle.standardOutput.synchronize()
 
-                        if let response = readLine()?.lowercased(), (response == "yes" || response == "y") {
+                        let response = DispatchQueue.global().sync {
+                            readLine()?.lowercased()
+                        }
+                        
+                        if let response = response, (response == "yes" || response == "y") {
                             print("\(Colored.green)Continuing installation.\(Colored.reset)")
                         } else {
                             print("\(Colored.red)Cancelled.\(Colored.reset)")
@@ -320,9 +349,9 @@ struct Install: AsyncParsableCommand {
             print("\(Colored.green)Deploying\(Colored.reset) package \(Colored.blue)\(pkg)\(Colored.reset)")
             let installcmd = Process()
 
-            let rootstg = pdec(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)/STAGING")
+            let rootstg = pdecLocal(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)/STAGING")
             installcmd.executableURL = URL(fileURLWithPath: "/bin/sh")
-            installcmd.arguments = ["-c", "cp -rv \(rootstg)/* \(pdec(path: "/"))"]
+            installcmd.arguments = ["-c", "cp -rv \(rootstg)/* \(pdecLocal(path: "/"))"]
             
             try installcmd.run()
             installcmd.waitUntilExit()
@@ -336,15 +365,15 @@ struct Install: AsyncParsableCommand {
             print("\(Colored.blue)>>> Registering package\(Colored.reset) \(Colored.reset)\(pkg)\(Colored.reset)")
             
             let prefix = "STAGING/"
-            let db = pdec(path: "/var/db/flyer/packages/\(buildFile.category)/\(buildFile.name)")
+            let db = pdecLocal(path: "/var/db/flyer/packages/\(buildFile.category)/\(buildFile.name)")
             try file.createDirectory(atPath: db, withIntermediateDirectories: true)
 
-            let enumerator = file.enumerator(atPath: pdec(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"))
+            let enumerator = file.enumerator(atPath: pdecLocal(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"))
             var installed: [String] = []
 
             while let rel = enumerator?.nextObject() as? String {
                 if rel.hasPrefix(prefix) {
-                    let fullPath = URL(fileURLWithPath: pdec(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"))
+                    let fullPath = URL(fileURLWithPath: pdecLocal(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"))
                         .appendingPathComponent(rel)
 
                     var isDir: ObjCBool = false
@@ -365,7 +394,7 @@ struct Install: AsyncParsableCommand {
                 print("\(Colored.green)Running \(Colored.reset) post-install scripts for package \(Colored.blue)\(pkg)\(Colored.reset)")
                 postcmd.executableURL = URL(fileURLWithPath: "/bin/sh")
                 postcmd.arguments = ["-c", buildFile.post]
-                postcmd.currentDirectoryURL = URL(fileURLWithPath: pdec(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"))   
+                postcmd.currentDirectoryURL = URL(fileURLWithPath: pdecLocal(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"))   
 
                 try postcmd.run()
                 postcmd.waitUntilExit()
@@ -378,7 +407,7 @@ struct Install: AsyncParsableCommand {
 
             stage(name: "cleanup", i: 9, max: 9, pkg: pkg)  
             print("\(Colored.yellow)Cleaning up\(Colored.reset) for package \(Colored.blue)\(pkg)\(Colored.reset)")
-            try file.removeItem(atPath: pdec(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"))
+            try file.removeItem(atPath: pdecLocal(path: "/var/tmp/flyer/\(buildFile.category)/\(buildFile.name)-\(buildFile.version)"))
 
             print("\(Bold.green)Installation complete\(Colored.reset) for package \(Colored.blue)\(pkg)\(Colored.reset)!")
         }
